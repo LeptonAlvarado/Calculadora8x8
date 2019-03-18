@@ -1,4 +1,4 @@
-#include<library/18F4620.h>
+#include<18F4620.h>
 #fuses HS, NOFCMEN, NOIESO, PUT, NOBROWNOUT, NOWDT
 #fuses NOPBADEN, NOMCLR, STVREN, NOLVP, NODEBUG
 #use delay(clock=16000000)
@@ -7,24 +7,77 @@
 #use fast_io(c)
 #use fast_io(d)
 #use fast_io(e)
-signed long resultado=0; //numero con signo
 
-//#define __DEBUG_SERIAL__ //Si comentas esta linea se deshabilita el debug por serial y el PIN_C6 puede ser usado en forma digital I/O
-#ifdef __DEBUG_SERIAL__
+//#define _DEBUG_SERIAL_ //Si comentas esta linea se deshabilita el debug por serial y el PIN_C6 puede ser usado en forma digital I/O
+#ifdef _DEBUG_SERIAL_
    #define TX_232        PIN_C6
    #use RS232(BAUD=9600, XMIT=TX_232, BITS=8,PARITY=N, STOP=1)
    #use fast_io(c)
 #endif
 
+void error();
 void main(){
     setup_oscillator(OSC_16MHZ);
-    #ifdef __DEBUG_SERIAL__ //Deberiamos de proteger nuestras depuraciones de esta forma o usar una macro ya protegida.
+    #ifdef _DEBUG_SERIAL_ //Deberiamos de proteger nuestras depuraciones de esta forma o usar una macro ya protegida.
     printf("Hola Mundo\n");//Puedes usar putc o printf. Revisa la documentación de CCS para ver que mas puedes hacer.
     #endif
     // asignar los puertos que seran de entrada y salida
-    set_tris_a(0xC0);
-    set_tris_b(0xF0);// la mitad del puerto sera de entrada para la selección de operación
-    set_tris_c(0x3F);// 6 bits completos seran de entrada
-    set_tris_d(0xFF);// todo el puerto sera de entrada
-    set_tris_e(0x08);// el bit 4 sera de entrada
+    set_tris_a(0x3F);// no puede tomar los ultimos dos bits como entrada, debido a que estos son para los OSC
+    set_tris_b(0xFF);// todo el puerto sera de entrada
+    set_tris_c(0x00);// todo el puerto sera de salida
+    set_tris_d(0x00);// todo el puerto sera de salida
+    set_tris_e(0xF);// debido a que es un puerto de 4 bits, estos 4 seran de entrada
+    int opcion=0;
+    signed long resultado=0; //numero con signo
+    while(1){
+        if(input(PIN_E0)==1){
+            opcion=1; //suma
+        } 
+        if(input(PIN_E1)==1){
+            opcion=2; //resta
+        }
+        if(input(PIN_E2)==1){
+            opcion=3; //multi
+        }
+        if(input(PIN_E3)==1){
+            opcion=4; //div
+        }
+        switch(opcion){
+            case 1:
+                resultado=(long)input_a()+(long)input_b();
+                opcion=0;
+                break;
+            case 2:
+                resultado=(long)input_a()-(long)input_b();
+                opcion=0;
+                break;
+            case 3:
+                resultado=(long)input_a()*(long)input_b();
+                opcion=0;
+                break;
+            case 4:
+                if((long)input_b()!=0){
+                    resultado=(long)input_a()/(long)input_b();
+                    opcion=0;
+                }else{
+                    error();
+                }
+                opcion=0;
+                break;
+        }
+        output_c(resultado);
+        output_d(resultado>>8);
+    }
+}
+  //esta funcion es en caso de que el dividendo sea 0, se hara un contador Anillo ascendente 
+void error(){
+    long count = 0x0001;
+    for(int i=0;i<13;i++){
+          output_c(count);
+          output_d(count>>8);
+          count*=2;
+          if(count == 0x1FFF)
+             count= 0x0001;
+          delay_ms(200);
+    }
 }
