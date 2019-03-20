@@ -40,7 +40,7 @@ void main(){
         if(input(PIN_E2)==1){
             opcion=3; //multi
         }
-        if(input(PIN_E3)==1){
+        if(input(PIN_A5)==1){
             opcion=4; //div
         }
         switch(opcion){
