@@ -1,6 +1,6 @@
 #include<18F4620.h>
 #fuses HS, NOFCMEN, NOIESO, PUT, NOBROWNOUT, NOWDT
-#fuses NOPBADEN, NOMCLR, STVREN, NOLVP, NODEBUG
+#fuses NOPBADEN, STVREN, NOLVP, NODEBUG
 #use delay(clock=16000000)
 #use fast_io(a)
 #use fast_io(b)
@@ -18,15 +18,16 @@
 void error();
 void main(){
     setup_oscillator(OSC_16MHZ);
+    setup_adc_ports(NO_ANALOGS);
     #ifdef _DEBUG_SERIAL_ //Deberiamos de proteger nuestras depuraciones de esta forma o usar una macro ya protegida.
     printf("Hola Mundo\n");//Puedes usar putc o printf. Revisa la documentación de CCS para ver que mas puedes hacer.
     #endif
     // asignar los puertos que seran de entrada y salida
-    set_tris_a(0x3F);// no puede tomar los ultimos dos bits como entrada, debido a que estos son para los OSC
+    set_tris_a(0x20);// no puede tomar los ultimos dos bits como entrada, debido a que estos son para los OSC
     set_tris_b(0xFF);// todo el puerto sera de entrada
     set_tris_c(0x00);// todo el puerto sera de salida
-    set_tris_d(0x00);// todo el puerto sera de salida
-    set_tris_e(0xF);// debido a que es un puerto de 4 bits, estos 4 seran de entrada
+    set_tris_d(0xFF);// todo el puerto sera de salida
+    set_tris_e(0x7);// debido a que es un puerto de 4 bits, estos 4 seran de entrada
     int opcion=0;
     signed long resultado=0; //numero con signo
     while(1){
@@ -44,20 +45,20 @@ void main(){
         }
         switch(opcion){
             case 1:
-                resultado=(long)input_a()+(long)input_b();
+                resultado=(long)input_b()+(long)input_d();
                 opcion=0;
                 break;
             case 2:
-                resultado=(long)input_a()-(long)input_b();
+                resultado=(long)input_b()-(long)input_d();
                 opcion=0;
                 break;
             case 3:
-                resultado=(long)input_a()*(long)input_b();
+                resultado=(long)input_b()*(long)input_d();
                 opcion=0;
                 break;
             case 4:
-                if((long)input_b()!=0){
-                    resultado=(long)input_a()/(long)input_b();
+                if((long)input_d()!=0){
+                    resultado=(long)input_b()/(long)input_d();
                     opcion=0;
                 }else{
                     error();
@@ -66,7 +67,7 @@ void main(){
                 break;
         }
         output_c(resultado);
-        output_d(resultado>>8);
+        output_a(resultado>>8);
     }
 }
   //esta funcion es en caso de que el dividendo sea 0, se hara un contador Anillo ascendente 
@@ -74,7 +75,7 @@ void error(){
     long count = 0x0001;
     for(int i=0;i<13;i++){
           output_c(count);
-          output_d(count>>8);
+          output_a(count>>8);
           count*=2;
           if(count == 0x1FFF)
              count= 0x0001;
